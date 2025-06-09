@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hệ thống quản lý nhân sự{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    {% if current_user.is_authenticated %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">
+                <i class="fas fa-users"></i> HR Management
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    
+                    {% if current_user.has_permission('employee_management') or current_user.has_permission('all') %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-users"></i> Nhân viên
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('employee.list_employees') }}">Danh sách nhân viên</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('employee.add') }}">Thêm nhân viên</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="attendanceDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-clock"></i> Chấm công
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('attendance.my_attendance') }}">Chấm công của tôi</a></li>
+                            {% if current_user.has_permission('all') or current_user.has_role('hr') or current_user.has_role('leader') %}
+                            <li><a class="dropdown-item" href="{{ url_for('attendance.all_attendance') }}">Tất cả chấm công</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('attendance.report') }}">Báo cáo chấm công</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="payrollDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-money-bill"></i> Lương
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('payroll.my_payroll') }}">Lương của tôi</a></li>
+                            {% if current_user.has_permission('payroll') or current_user.has_permission('all') %}
+                            <li><a class="dropdown-item" href="{{ url_for('payroll.all_payrolls') }}">Quản lý lương</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('payroll.generate') }}">Tạo bảng lương</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('payroll.report') }}">Báo cáo lương</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="benefitsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-gift"></i> Phúc lợi
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('benefits.my_benefits') }}">Phúc lợi của tôi</a></li>
+                            {% if current_user.has_permission('benefits') or current_user.has_permission('all') %}
+                            <li><a class="dropdown-item" href="{{ url_for('benefits.all_benefits') }}">Quản lý phúc lợi</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('benefits.add') }}">Thêm phúc lợi</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('benefits.report') }}">Báo cáo phúc lợi</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    
+                    {% if current_user.has_permission('recruitment') or current_user.has_permission('all') %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="recruitmentDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-plus"></i> Tuyển dụng
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('recruitment.job_postings') }}">Tin tuyển dụng</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('recruitment.applications') }}">Đơn ứng tuyển</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('recruitment.add_job') }}">Tạo tin tuyển dụng</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('recruitment.report') }}">Báo cáo tuyển dụng</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    
+                    {% if current_user.has_permission('all') or current_user.has_role('hr') %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog"></i> Quản trị
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.rewards') }}">Khen thưởng</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.pending_rewards') }}">Khen thưởng chờ duyệt</a></li>
+                            {% if current_user.has_permission('all') %}
+                            <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">Quản lý người dùng</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.system_stats') }}">Thống kê hệ thống</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <!-- User menu -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('main.profile') }}">Hồ sơ cá nhân</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}">Đổi mật khẩu</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Đăng xuất</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    
+    <!-- Main content -->
+    <main class="container-fluid mt-4">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+        <div class="container">
+            <p>&copy; 2024 Hệ thống quản lý nhân sự. Tất cả quyền được bảo lưu.</p>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
