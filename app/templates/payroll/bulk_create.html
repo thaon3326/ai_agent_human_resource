@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo bảng lương hàng loạt - Hệ thống quản lý nhân sự{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">
+                <i class="fas fa-users"></i> Tạo bảng lương hàng loạt
+            </h1>
+            <a href="{{ url_for('payroll.list_payrolls') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<form method="POST">
+    <div class="row">
+        <!-- Selection Criteria -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Tiêu chí lựa chọn</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Phòng ban</label>
+                        <select class="form-control" id="department" name="department">
+                            <option value="">Tất cả phòng ban</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept }}">{{ dept }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Chọn phòng ban để tạo bảng lương cho tất cả nhân viên trong phòng ban đó</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="employment_type" class="form-label">Loại hợp đồng</label>
+                        <select class="form-control" id="employment_type" name="employment_type">
+                            <option value="">Tất cả loại hợp đồng</option>
+                            <option value="full_time">Toàn thời gian</option>
+                            <option value="part_time">Bán thời gian</option>
+                            <option value="contract">Hợp đồng</option>
+                            <option value="internship">Thực tập</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="exclude_existing" name="exclude_existing" checked>
+                            <label class="form-check-label" for="exclude_existing">
+                                Bỏ qua nhân viên đã có bảng lương trong kỳ này
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pay Period -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Kỳ lương</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="pay_period_start" class="form-label">Từ ngày <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="pay_period_start" name="pay_period_start" 
+                                   value="{{ pay_period_start }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="pay_period_end" class="form-label">Đến ngày <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="pay_period_end" name="pay_period_end" 
+                                   value="{{ pay_period_end }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Lưu ý:</strong> Hệ thống sẽ tự động tính toán giờ làm việc và tăng ca dựa trên dữ liệu chấm công trong kỳ này.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preview -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Xem trước danh sách nhân viên</h6>
+                </div>
+                <div class="card-body">
+                    <button type="button" class="btn btn-info mb-3" id="previewBtn">
+                        <i class="fas fa-eye"></i> Xem trước danh sách
+                    </button>
+                    
+                    <div id="previewResults" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="employeeTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>
+                                            <input type="checkbox" id="selectAll" checked>
+                                        </th>
+                                        <th>Mã NV</th>
+                                        <th>Họ tên</th>
+                                        <th>Phòng ban</th>
+                                        <th>Chức vụ</th>
+                                        <th>Lương cơ bản</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employeeTableBody">
+                                    <!-- Data will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="alert alert-success">
+                                <strong>Tổng số nhân viên được chọn: <span id="selectedCount">0</span></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Default Settings -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Cài đặt mặc định</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="default_allowances" class="form-label">Phụ cấp mặc định (VND)</label>
+                            <input type="number" class="form-control" id="default_allowances" name="default_allowances" 
+                                   min="0" step="10000" value="0">
+                            <div class="form-text">Phụ cấp sẽ được áp dụng cho tất cả nhân viên</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="default_overtime_rate" class="form-label">Hệ số tăng ca mặc định</label>
+                            <select class="form-control" id="default_overtime_rate" name="default_overtime_rate">
+                                <option value="1.5">1.5x (Ngày thường)</option>
+                                <option value="2.0">2.0x (Cuối tuần)</option>
+                                <option value="3.0">3.0x (Ngày lễ)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="auto_approve" class="form-label">Tự động duyệt</label>
+                            <select class="form-control" id="auto_approve" name="auto_approve">
+                                <option value="0">Lưu nháp</option>
+                                <option value="1">Tự động duyệt</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Ghi chú chung</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Ghi chú sẽ được áp dụng cho tất cả bảng lương..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Submit Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <button type="submit" class="btn btn-primary btn-lg me-3" id="submitBtn" disabled>
+                        <i class="fas fa-save"></i> Tạo bảng lương hàng loạt
+                    </button>
+                    <a href="{{ url_for('payroll.list_payrolls') }}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Hủy bỏ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Preview employees
+    $('#previewBtn').on('click', function() {
+        var department = $('#department').val();
+        var employmentType = $('#employment_type').val();
+        var startDate = $('#pay_period_start').val();
+        var endDate = $('#pay_period_end').val();
+        var excludeExisting = $('#exclude_existing').is(':checked');
+        
+        if (!startDate || !endDate) {
+            alert('Vui lòng chọn kỳ lương');
+            return;
+        }
+        
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Đang tải...');
+        
+        $.ajax({
+            url: '{{ url_for("payroll.preview_bulk_create") }}',
+            method: 'POST',
+            data: {
+                department: department,
+                employment_type: employmentType,
+                pay_period_start: startDate,
+                pay_period_end: endDate,
+                exclude_existing: excludeExisting ? 1 : 0
+            },
+            success: function(response) {
+                if (response.success) {
+                    var tbody = $('#employeeTableBody');
+                    tbody.empty();
+                    
+                    response.employees.forEach(function(employee) {
+                        var row = `
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="employee_ids" value="${employee.id}" checked>
+                                </td>
+                                <td>${employee.employee_id}</td>
+                                <td>${employee.full_name}</td>
+                                <td>${employee.department || '-'}</td>
+                                <td>${employee.position || '-'}</td>
+                                <td>${formatCurrency(employee.salary || 0)}</td>
+                                <td>
+                                    ${employee.has_existing ? 
+                                        '<span class="badge bg-warning">Đã có bảng lương</span>' : 
+                                        '<span class="badge bg-success">Chưa có bảng lương</span>'
+                                    }
+                                </td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                    
+                    $('#previewResults').show();
+                    updateSelectedCount();
+                    $('#submitBtn').prop('disabled', false);
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra khi tải danh sách nhân viên');
+            },
+            complete: function() {
+                $('#previewBtn').prop('disabled', false).html('<i class="fas fa-eye"></i> Xem trước danh sách');
+            }
+        });
+    });
+    
+    // Select all checkbox
+    $(document).on('change', '#selectAll', function() {
+        $('input[name="employee_ids"]').prop('checked', $(this).is(':checked'));
+        updateSelectedCount();
+    });
+    
+    // Individual checkbox change
+    $(document).on('change', 'input[name="employee_ids"]', function() {
+        updateSelectedCount();
+        
+        var totalCheckboxes = $('input[name="employee_ids"]').length;
+        var checkedCheckboxes = $('input[name="employee_ids"]:checked').length;
+        
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // Form validation
+    $('form').on('submit', function(e) {
+        var selectedEmployees = $('input[name="employee_ids"]:checked').length;
+        
+        if (selectedEmployees === 0) {
+            e.preventDefault();
+            alert('Vui lòng chọn ít nhất một nhân viên');
+            return false;
+        }
+        
+        if (!confirm(`Bạn có chắc chắn muốn tạo bảng lương cho ${selectedEmployees} nhân viên?`)) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Show loading state
+        $('#submitBtn').prop('disabled', true)
+                      .html('<span class="spinner-border spinner-border-sm me-2"></span>Đang tạo bảng lương...');
+    });
+});
+
+function updateSelectedCount() {
+    var count = $('input[name="employee_ids"]:checked').length;
+    $('#selectedCount').text(count);
+    $('#submitBtn').prop('disabled', count === 0);
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
+}
+</script>
+{% endblock %}

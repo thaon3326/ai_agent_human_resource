@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.employee import Employee
 from app.models.payroll import Payroll
+from app.models.attendance import Attendance
 from datetime import datetime, date, timedelta
 from calendar import monthrange
 from sqlalchemy import func
@@ -52,6 +53,11 @@ def my_payroll():
                          yearly_totals=yearly_totals,
                          selected_year=year,
                          employee=employee)
+
+@bp.route('/list')
+@login_required
+def list_payrolls():
+    return all_payrolls()
 
 @bp.route('/all')
 @login_required
@@ -107,6 +113,11 @@ def view(id):
         return redirect(url_for('main.dashboard'))
     
     return render_template('payroll/view.html', payroll=payroll)
+
+@bp.route('/create', methods=['GET', 'POST'])
+@login_required
+def create():
+    return generate()
 
 @bp.route('/generate', methods=['GET', 'POST'])
 @login_required
@@ -165,6 +176,52 @@ def generate():
     
     employees = Employee.query.filter_by(status='active').order_by(Employee.full_name).all()
     return render_template('payroll/generate.html', employees=employees)
+
+@bp.route('/get-attendance-data', methods=['POST'])
+@login_required
+def get_attendance_data():
+    try:
+        employee_id = int(request.form['employee_id'])
+        start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d').date()
+        end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
+        
+        # Get attendance records for the period
+        attendances = Attendance.query.filter(
+            Attendance.employee_id == employee_id,
+            Attendance.date >= start_date,
+            Attendance.date <= end_date
+        ).all()
+        
+        total_days = (end_date - start_date).days + 1
+        working_days = len(attendances)
+        absent_days = total_days - working_days
+        
+        regular_hours = 0
+        overtime_hours = 0
+        
+        for attendance in attendances:
+            if attendance.total_hours:
+                if attendance.total_hours <= 8:
+                    regular_hours += attendance.total_hours
+                else:
+                    regular_hours += 8
+                    overtime_hours += attendance.total_hours - 8
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'working_days': working_days,
+                'absent_days': absent_days,
+                'regular_hours': round(regular_hours, 1),
+                'overtime_hours': round(overtime_hours, 1)
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
 
 @bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required

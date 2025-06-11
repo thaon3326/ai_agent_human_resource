@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo bảng lương - Hệ thống quản lý nhân sự{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">
+                <i class="fas fa-plus"></i> Tạo bảng lương
+            </h1>
+            <a href="{{ url_for('payroll.list_payrolls') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<form method="POST" id="payrollForm">
+    <div class="row">
+        <!-- Employee Selection -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Chọn nhân viên</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="employee_id" class="form-label">Nhân viên <span class="text-danger">*</span></label>
+                        <select class="form-control" id="employee_id" name="employee_id" required>
+                            <option value="">Chọn nhân viên</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.id }}" 
+                                    data-salary="{{ employee.salary or 0 }}"
+                                    data-department="{{ employee.department or '' }}"
+                                    data-position="{{ employee.position or '' }}"
+                                    {% if selected_employee and selected_employee.id == employee.id %}selected{% endif %}>
+                                {{ employee.full_name }} - {{ employee.employee_id }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="employeeInfo" class="alert alert-info" style="display: none;">
+                        <h6>Thông tin nhân viên:</h6>
+                        <div id="employeeDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pay Period -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Kỳ lương</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="pay_period_start" class="form-label">Từ ngày <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="pay_period_start" name="pay_period_start" 
+                                   value="{{ pay_period_start }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="pay_period_end" class="form-label">Đến ngày <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="pay_period_end" name="pay_period_end" 
+                                   value="{{ pay_period_end }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-info" id="loadAttendanceBtn">
+                            <i class="fas fa-sync"></i> Tải dữ liệu chấm công
+                        </button>
+                        <small class="form-text text-muted">Tự động tính toán giờ làm việc và overtime từ dữ liệu chấm công</small>
+                    </div>
+                    
+                    <div id="attendanceInfo" class="alert alert-success" style="display: none;">
+                        <h6>Dữ liệu chấm công:</h6>
+                        <div id="attendanceDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Basic Salary & Hours -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Lương cơ bản & Giờ làm việc</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="basic_salary" class="form-label">Lương cơ bản (VND)</label>
+                        <input type="number" class="form-control" id="basic_salary" name="basic_salary" 
+                               min="0" step="100000" readonly>
+                        <div class="form-text">Lương cơ bản từ hồ sơ nhân viên</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="hours_worked" class="form-label">Giờ làm việc</label>
+                            <input type="number" class="form-control" id="hours_worked" name="hours_worked" 
+                                   min="0" step="0.5" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="overtime_hours" class="form-label">Giờ tăng ca</label>
+                            <input type="number" class="form-control" id="overtime_hours" name="overtime_hours" 
+                                   min="0" step="0.5" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="overtime_rate" class="form-label">Hệ số tăng ca</label>
+                        <select class="form-control" id="overtime_rate" name="overtime_rate">
+                            <option value="1.5">1.5x (Ngày thường)</option>
+                            <option value="2.0">2.0x (Cuối tuần)</option>
+                            <option value="3.0">3.0x (Ngày lễ)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Allowances & Bonuses -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Phụ cấp & Thưởng</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="allowances" class="form-label">Phụ cấp (VND)</label>
+                        <input type="number" class="form-control" id="allowances" name="allowances" 
+                               min="0" step="10000" value="0">
+                        <div class="form-text">Phụ cấp ăn trưa, xăng xe, điện thoại...</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="bonuses" class="form-label">Thưởng (VND)</label>
+                        <input type="number" class="form-control" id="bonuses" name="bonuses" 
+                               min="0" step="10000" value="0">
+                        <div class="form-text">Thưởng hiệu suất, thưởng dự án...</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="bonus_description" class="form-label">Mô tả thưởng</label>
+                        <textarea class="form-control" id="bonus_description" name="bonus_description" 
+                                  rows="2" placeholder="Mô tả lý do thưởng..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Deductions -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Khấu trừ</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="social_insurance" class="form-label">Bảo hiểm xã hội (8%)</label>
+                        <input type="number" class="form-control" id="social_insurance" name="social_insurance" 
+                               min="0" step="1000" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="health_insurance" class="form-label">Bảo hiểm y tế (1.5%)</label>
+                        <input type="number" class="form-control" id="health_insurance" name="health_insurance" 
+                               min="0" step="1000" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="unemployment_insurance" class="form-label">Bảo hiểm thất nghiệp (1%)</label>
+                        <input type="number" class="form-control" id="unemployment_insurance" name="unemployment_insurance" 
+                               min="0" step="1000" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="personal_income_tax" class="form-label">Thuế thu nhập cá nhân</label>
+                        <input type="number" class="form-control" id="personal_income_tax" name="personal_income_tax" 
+                               min="0" step="1000" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="other_deductions" class="form-label">Khấu trừ khác</label>
+                        <input type="number" class="form-control" id="other_deductions" name="other_deductions" 
+                               min="0" step="1000" value="0">
+                        <div class="form-text">Tạm ứng, phạt, khấu trừ khác...</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="deduction_description" class="form-label">Mô tả khấu trừ</label>
+                        <textarea class="form-control" id="deduction_description" name="deduction_description" 
+                                  rows="2" placeholder="Mô tả lý do khấu trừ..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Tổng kết</h6>
+                </div>
+                <div class="card-body">
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Lương cơ bản:</span>
+                            <span id="summaryBasicSalary">0 VND</span>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Lương tăng ca:</span>
+                            <span id="summaryOvertimePay">0 VND</span>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Phụ cấp:</span>
+                            <span id="summaryAllowances">0 VND</span>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Thưởng:</span>
+                            <span id="summaryBonuses">0 VND</span>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Tổng thu nhập:</span>
+                            <span id="summaryGrossPay" class="text-success">0 VND</span>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Tổng khấu trừ:</span>
+                            <span id="summaryDeductions" class="text-danger">0 VND</span>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between fw-bold fs-5">
+                            <span>Thực nhận:</span>
+                            <span id="summaryNetPay" class="text-primary">0 VND</span>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="gross_pay" name="gross_pay" value="0">
+                    <input type="hidden" id="deductions" name="deductions" value="0">
+                    <input type="hidden" id="net_pay" name="net_pay" value="0">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notes -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Ghi chú</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Ghi chú</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Ghi chú thêm về bảng lương này..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Submit Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <button type="submit" name="action" value="save_draft" class="btn btn-secondary btn-lg me-3">
+                        <i class="fas fa-save"></i> Lưu nháp
+                    </button>
+                    <button type="submit" name="action" value="save_and_approve" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-check"></i> Lưu và duyệt
+                    </button>
+                    <a href="{{ url_for('payroll.list_payrolls') }}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-times"></i> Hủy bỏ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Employee selection change
+    $('#employee_id').on('change', function() {
+        var selectedOption = $(this).find('option:selected');
+        var salary = parseFloat(selectedOption.data('salary')) || 0;
+        var department = selectedOption.data('department') || '';
+        var position = selectedOption.data('position') || '';
+        
+        if ($(this).val()) {
+            $('#basic_salary').val(salary);
+            $('#employeeDetails').html(
+                '<strong>Phòng ban:</strong> ' + department + '<br>' +
+                '<strong>Chức vụ:</strong> ' + position + '<br>' +
+                '<strong>Lương cơ bản:</strong> ' + formatCurrency(salary)
+            );
+            $('#employeeInfo').show();
+        } else {
+            $('#basic_salary').val(0);
+            $('#employeeInfo').hide();
+        }
+        
+        calculatePayroll();
+    });
+    
+    // Load attendance data
+    $('#loadAttendanceBtn').on('click', function() {
+        var employeeId = $('#employee_id').val();
+        var startDate = $('#pay_period_start').val();
+        var endDate = $('#pay_period_end').val();
+        
+        if (!employeeId || !startDate || !endDate) {
+            alert('Vui lòng chọn nhân viên và kỳ lương');
+            return;
+        }
+        
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Đang tải...');
+        
+        $.ajax({
+            url: '{{ url_for("payroll.get_attendance_data") }}',
+            method: 'POST',
+            data: {
+                employee_id: employeeId,
+                start_date: startDate,
+                end_date: endDate
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#hours_worked').val(response.data.regular_hours);
+                    $('#overtime_hours').val(response.data.overtime_hours);
+                    
+                    $('#attendanceDetails').html(
+                        '<strong>Ngày làm việc:</strong> ' + response.data.working_days + ' ngày<br>' +
+                        '<strong>Giờ làm việc:</strong> ' + response.data.regular_hours + ' giờ<br>' +
+                        '<strong>Giờ tăng ca:</strong> ' + response.data.overtime_hours + ' giờ<br>' +
+                        '<strong>Ngày nghỉ:</strong> ' + response.data.absent_days + ' ngày'
+                    );
+                    $('#attendanceInfo').show();
+                    
+                    calculatePayroll();
+                } else {
+                    alert('Lỗi: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Có lỗi xảy ra khi tải dữ liệu chấm công');
+            },
+            complete: function() {
+                $('#loadAttendanceBtn').prop('disabled', false).html('<i class="fas fa-sync"></i> Tải dữ liệu chấm công');
+            }
+        });
+    });
+    
+    // Auto-calculate when values change
+    $('#basic_salary, #hours_worked, #overtime_hours, #overtime_rate, #allowances, #bonuses, #other_deductions').on('input change', function() {
+        calculatePayroll();
+    });
+    
+    // Set default pay period (current month)
+    if (!$('#pay_period_start').val()) {
+        var now = new Date();
+        var firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        $('#pay_period_start').val(firstDay.toISOString().split('T')[0]);
+        $('#pay_period_end').val(lastDay.toISOString().split('T')[0]);
+    }
+    
+    // Initial calculation if employee is pre-selected
+    if ($('#employee_id').val()) {
+        $('#employee_id').trigger('change');
+    }
+});
+
+function calculatePayroll() {
+    var basicSalary = parseFloat($('#basic_salary').val()) || 0;
+    var hoursWorked = parseFloat($('#hours_worked').val()) || 0;
+    var overtimeHours = parseFloat($('#overtime_hours').val()) || 0;
+    var overtimeRate = parseFloat($('#overtime_rate').val()) || 1.5;
+    var allowances = parseFloat($('#allowances').val()) || 0;
+    var bonuses = parseFloat($('#bonuses').val()) || 0;
+    var otherDeductions = parseFloat($('#other_deductions').val()) || 0;
+    
+    // Calculate hourly rate (assuming 22 working days, 8 hours per day)
+    var hourlyRate = basicSalary / (22 * 8);
+    
+    // Calculate actual basic salary based on hours worked
+    var actualBasicSalary = hourlyRate * hoursWorked;
+    
+    // Calculate overtime pay
+    var overtimePay = hourlyRate * overtimeHours * overtimeRate;
+    
+    // Calculate gross pay
+    var grossPay = actualBasicSalary + overtimePay + allowances + bonuses;
+    
+    // Calculate insurance deductions (based on basic salary)
+    var socialInsurance = basicSalary * 0.08;
+    var healthInsurance = basicSalary * 0.015;
+    var unemploymentInsurance = basicSalary * 0.01;
+    
+    // Calculate personal income tax (simplified)
+    var taxableIncome = grossPay - socialInsurance - healthInsurance - unemploymentInsurance - 11000000; // 11M personal deduction
+    var personalIncomeTax = 0;
+    
+    if (taxableIncome > 0) {
+        if (taxableIncome <= 5000000) {
+            personalIncomeTax = taxableIncome * 0.05;
+        } else if (taxableIncome <= 10000000) {
+            personalIncomeTax = 5000000 * 0.05 + (taxableIncome - 5000000) * 0.10;
+        } else if (taxableIncome <= 18000000) {
+            personalIncomeTax = 5000000 * 0.05 + 5000000 * 0.10 + (taxableIncome - 10000000) * 0.15;
+        } else {
+            personalIncomeTax = 5000000 * 0.05 + 5000000 * 0.10 + 8000000 * 0.15 + (taxableIncome - 18000000) * 0.20;
+        }
+    }
+    
+    // Total deductions
+    var totalDeductions = socialInsurance + healthInsurance + unemploymentInsurance + personalIncomeTax + otherDeductions;
+    
+    // Net pay
+    var netPay = grossPay - totalDeductions;
+    
+    // Update insurance fields
+    $('#social_insurance').val(Math.round(socialInsurance));
+    $('#health_insurance').val(Math.round(healthInsurance));
+    $('#unemployment_insurance').val(Math.round(unemploymentInsurance));
+    $('#personal_income_tax').val(Math.round(personalIncomeTax));
+    
+    // Update summary
+    $('#summaryBasicSalary').text(formatCurrency(actualBasicSalary));
+    $('#summaryOvertimePay').text(formatCurrency(overtimePay));
+    $('#summaryAllowances').text(formatCurrency(allowances));
+    $('#summaryBonuses').text(formatCurrency(bonuses));
+    $('#summaryGrossPay').text(formatCurrency(grossPay));
+    $('#summaryDeductions').text(formatCurrency(totalDeductions));
+    $('#summaryNetPay').text(formatCurrency(netPay));
+    
+    // Update hidden fields
+    $('#gross_pay').val(Math.round(grossPay));
+    $('#deductions').val(Math.round(totalDeductions));
+    $('#net_pay').val(Math.round(netPay));
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + ' VND';
+}
+
+// Form validation
+$('#payrollForm').on('submit', function(e) {
+    var employeeId = $('#employee_id').val();
+    var startDate = $('#pay_period_start').val();
+    var endDate = $('#pay_period_end').val();
+    
+    if (!employeeId || !startDate || !endDate) {
+        e.preventDefault();
+        alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+        return false;
+    }
+    
+    if (new Date(startDate) >= new Date(endDate)) {
+        e.preventDefault();
+        alert('Ngày bắt đầu phải nhỏ hơn ngày kết thúc');
+        return false;
+    }
+    
+    // Show loading state
+    $(this).find('button[type="submit"]').prop('disabled', true);
+});
+</script>
+{% endblock %}

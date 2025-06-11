@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Thêm nhân viên - Hệ thống quản lý nhân sự{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">
+                <i class="fas fa-user-plus"></i> Thêm nhân viên mới
+            </h1>
+            <a href="{{ url_for('employee.list_employees') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    <div class="row">
+        <!-- Account Information -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Thông tin tài khoản</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                        <div class="form-text">Tên đăng nhập để truy cập hệ thống</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Mật khẩu</label>
+                        <input type="password" class="form-control" id="password" name="password" value="password123">
+                        <div class="form-text">Mặc định: password123 (nhân viên có thể đổi sau)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Vai trò</label>
+                        <select class="form-control" id="role" name="role">
+                            <option value="employee">Nhân viên</option>
+                            <option value="leader">Trưởng nhóm</option>
+                            <option value="hr">Nhân sự</option>
+                            <option value="admin">Quản trị viên</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Personal Information -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Thông tin cá nhân</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="employee_id" class="form-label">Mã nhân viên <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                        <div class="form-text">Mã định danh duy nhất của nhân viên</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">Họ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Tên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="date_of_birth" class="form-label">Ngày sinh</label>
+                            <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="gender" class="form-label">Giới tính</label>
+                            <select class="form-control" id="gender" name="gender">
+                                <option value="">Chọn giới tính</option>
+                                <option value="male">Nam</option>
+                                <option value="female">Nữ</option>
+                                <option value="other">Khác</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Số điện thoại</label>
+                        <input type="tel" class="form-control" id="phone" name="phone">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Địa chỉ</label>
+                        <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Emergency Contact -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Liên hệ khẩn cấp</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="emergency_contact" class="form-label">Tên người liên hệ</label>
+                        <input type="text" class="form-control" id="emergency_contact" name="emergency_contact">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emergency_phone" class="form-label">Số điện thoại khẩn cấp</label>
+                        <input type="tel" class="form-control" id="emergency_phone" name="emergency_phone">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Work Information -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Thông tin công việc</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Phòng ban</label>
+                        <input type="text" class="form-control" id="department" name="department" 
+                               list="departments" placeholder="Nhập hoặc chọn phòng ban">
+                        <datalist id="departments">
+                            <option value="Công nghệ thông tin">
+                            <option value="Nhân sự">
+                            <option value="Kế toán">
+                            <option value="Marketing">
+                            <option value="Kinh doanh">
+                            <option value="Vận hành">
+                        </datalist>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="position" class="form-label">Chức vụ</label>
+                        <input type="text" class="form-control" id="position" name="position" 
+                               list="positions" placeholder="Nhập hoặc chọn chức vụ">
+                        <datalist id="positions">
+                            <option value="Developer">
+                            <option value="Team Leader">
+                            <option value="Manager">
+                            <option value="Senior Developer">
+                            <option value="Junior Developer">
+                            <option value="Business Analyst">
+                            <option value="Tester">
+                            <option value="Designer">
+                        </datalist>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="hire_date" class="form-label">Ngày vào làm</label>
+                            <input type="date" class="form-control" id="hire_date" name="hire_date" 
+                                   value="{{ date.today().strftime('%Y-%m-%d') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="employment_type" class="form-label">Loại hợp đồng</label>
+                            <select class="form-control" id="employment_type" name="employment_type">
+                                <option value="full_time">Toàn thời gian</option>
+                                <option value="part_time">Bán thời gian</option>
+                                <option value="contract">Hợp đồng</option>
+                                <option value="internship">Thực tập</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="salary" class="form-label">Lương cơ bản (VND)</label>
+                            <input type="number" class="form-control" id="salary" name="salary" 
+                                   min="0" step="100000" placeholder="15000000">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="manager_id" class="form-label">Quản lý trực tiếp</label>
+                            <select class="form-control" id="manager_id" name="manager_id">
+                                <option value="">Chọn quản lý</option>
+                                {% for manager in managers %}
+                                <option value="{{ manager.id }}">{{ manager.full_name }} - {{ manager.position }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Submit Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <button type="submit" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-save"></i> Lưu nhân viên
+                    </button>
+                    <a href="{{ url_for('employee.list_employees') }}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times"></i> Hủy bỏ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-generate employee ID based on department
+    $('#department').on('change', function() {
+        var dept = $(this).val();
+        var prefix = '';
+        
+        switch(dept) {
+            case 'Công nghệ thông tin': prefix = 'IT'; break;
+            case 'Nhân sự': prefix = 'HR'; break;
+            case 'Kế toán': prefix = 'AC'; break;
+            case 'Marketing': prefix = 'MK'; break;
+            case 'Kinh doanh': prefix = 'SA'; break;
+            case 'Vận hành': prefix = 'OP'; break;
+            default: prefix = 'EMP'; break;
+        }
+        
+        if (prefix && !$('#employee_id').val()) {
+            var timestamp = new Date().getTime().toString().slice(-3);
+            $('#employee_id').val(prefix + timestamp);
+        }
+    });
+    
+    // Format salary input
+    $('#salary').on('input', function() {
+        var value = $(this).val().replace(/\D/g, '');
+        $(this).val(value);
+    });
+    
+    // Validate form before submit
+    $('form').on('submit', function(e) {
+        var username = $('#username').val();
+        var email = $('#email').val();
+        var employeeId = $('#employee_id').val();
+        var firstName = $('#first_name').val();
+        var lastName = $('#last_name').val();
+        
+        if (!username || !email || !employeeId || !firstName || !lastName) {
+            e.preventDefault();
+            alert('Vui lòng điền đầy đủ các trường bắt buộc (*)');
+            return false;
+        }
+        
+        // Show loading state
+        $(this).find('button[type="submit"]').prop('disabled', true)
+               .html('<span class="spinner-border spinner-border-sm me-2"></span>Đang lưu...');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Danh sách nhân viên - Hệ thống quản lý nhân sự{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">
+                <i class="fas fa-users"></i> Danh sách nhân viên
+            </h1>
+            <a href="{{ url_for('employee.add') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Thêm nhân viên
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Tìm kiếm</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ search }}" placeholder="Tên, mã NV, chức vụ...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="department" class="form-label">Phòng ban</label>
+                        <select class="form-control" id="department" name="department">
+                            <option value="">Tất cả phòng ban</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept }}" {% if dept == selected_department %}selected{% endif %}>
+                                {{ dept }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Trạng thái</label>
+                        <select class="form-control" id="status" name="status">
+                            <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Đang làm việc</option>
+                            <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>Tạm nghỉ</option>
+                            <option value="terminated" {% if selected_status == 'terminated' %}selected{% endif %}>Đã nghỉ việc</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                        <a href="{{ url_for('employee.list_employees') }}" class="btn btn-secondary">
+                            <i class="fas fa-refresh"></i> Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-primary">
+                    Danh sách nhân viên ({{ employees.total }} nhân viên)
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if employees.items %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Avatar</th>
+                                <th>Mã NV</th>
+                                <th>Họ tên</th>
+                                <th>Phòng ban</th>
+                                <th>Chức vụ</th>
+                                <th>Ngày vào làm</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee in employees.items %}
+                            <tr>
+                                <td class="text-center">
+                                    {% if employee.avatar %}
+                                        <img src="{{ url_for('static', filename=employee.avatar) }}" 
+                                             class="rounded-circle" width="40" height="40" alt="Avatar">
+                                    {% else %}
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ employee.employee_id }}</td>
+                                <td>
+                                    <strong>{{ employee.full_name }}</strong>
+                                    {% if employee.phone %}
+                                    <br><small class="text-muted">{{ employee.phone }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ employee.department or '-' }}</td>
+                                <td>{{ employee.position or '-' }}</td>
+                                <td>{{ employee.hire_date.strftime('%d/%m/%Y') if employee.hire_date else '-' }}</td>
+                                <td>
+                                    {% if employee.status == 'active' %}
+                                        <span class="badge bg-success">Đang làm việc</span>
+                                    {% elif employee.status == 'inactive' %}
+                                        <span class="badge bg-warning">Tạm nghỉ</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Đã nghỉ việc</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('employee.view', id=employee.id) }}" 
+                                           class="btn btn-sm btn-info" title="Xem chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('employee.edit', id=employee.id) }}" 
+                                           class="btn btn-sm btn-warning" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if current_user.has_permission('all') %}
+                                        <form method="POST" action="{{ url_for('employee.delete', id=employee.id) }}" 
+                                              class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa nhân viên này?')">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Xóa">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if employees.pages > 1 %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if employees.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('employee.list_employees', page=employees.prev_num, search=search, department=selected_department, status=selected_status) }}">
+                                Trước
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in employees.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num != employees.page %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('employee.list_employees', page=page_num, search=search, department=selected_department, status=selected_status) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if employees.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('employee.list_employees', page=employees.next_num, search=search, department=selected_department, status=selected_status) }}">
+                                Sau
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5>Không có nhân viên nào</h5>
+                    <p class="text-muted">Chưa có nhân viên nào trong hệ thống hoặc không khớp với điều kiện tìm kiếm.</p>
+                    <a href="{{ url_for('employee.add') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Thêm nhân viên đầu tiên
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

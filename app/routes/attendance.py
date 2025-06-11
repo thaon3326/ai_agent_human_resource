@@ -12,9 +12,73 @@ bp = Blueprint('attendance', __name__)
 @login_required
 def index():
     if current_user.has_permission('all') or current_user.has_role('hr'):
-        return redirect(url_for('attendance.all_attendance'))
+        return redirect(url_for('attendance.list_attendance'))
     else:
         return redirect(url_for('attendance.my_attendance'))
+
+@bp.route('/list')
+@login_required
+def list_attendance():
+    if not current_user.has_permission('hr'):
+        flash('Bạn không có quyền truy cập trang này', 'error')
+        return redirect(url_for('attendance.my_attendance'))
+    
+    page = request.args.get('page', 1, type=int)
+    employee_search = request.args.get('employee_search', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    department = request.args.get('department', '')
+    
+    query = Attendance.query.join(Employee)
+    
+    # Apply filters
+    if employee_search:
+        query = query.filter(
+            Employee.full_name.contains(employee_search) |
+            Employee.employee_id.contains(employee_search)
+        )
+    
+    if date_from:
+        query = query.filter(Attendance.date >= datetime.strptime(date_from, '%Y-%m-%d').date())
+    
+    if date_to:
+        query = query.filter(Attendance.date <= datetime.strptime(date_to, '%Y-%m-%d').date())
+    
+    if department:
+        query = query.filter(Employee.department == department)
+    
+    attendances = query.order_by(Attendance.date.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    # Get statistics
+    stats_query = query
+    total_records = stats_query.count()
+    avg_hours = stats_query.with_entities(func.avg(Attendance.total_hours)).scalar() or 0
+    total_overtime = stats_query.with_entities(func.sum(Attendance.overtime_hours)).scalar() or 0
+    late_count = stats_query.filter(Attendance.is_late == True).count()
+    
+    stats = {
+        'total_records': total_records,
+        'avg_hours': avg_hours,
+        'total_overtime': total_overtime,
+        'late_count': late_count
+    }
+    
+    # Get departments for filter
+    departments = db.session.query(Employee.department).filter(
+        Employee.department.isnot(None)
+    ).distinct().all()
+    departments = [dept[0] for dept in departments]
+    
+    return render_template('attendance/list.html',
+                         attendances=attendances,
+                         stats=stats,
+                         employee_search=employee_search,
+                         date_from=date_from,
+                         date_to=date_to,
+                         selected_department=department,
+                         departments=departments)
 
 @bp.route('/my')
 @login_required
